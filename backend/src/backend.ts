@@ -88,6 +88,7 @@ app.post('/assistant',async(req,res)=>{
 app.post('/friend',async(req,res)=>{
   try{
     const data = req.body;
+    //make prompts query for more addons to the chatgpt input runnables.
   }
   catch(error){
       return res.status(500).json({message:"Internal Server Error"});
