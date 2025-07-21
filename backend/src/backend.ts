@@ -69,8 +69,10 @@ app.post('/language',async(req,res)=>{
 })
 
 app.post('/assistant',async(req,res)=>{
+  // console.log("this is the data from frontend to backend in assistant route,",req.body);
   try{
     const {data} = req.body;
+    // console.log("this is data coming for assistant👍\t",data)
     const input=[
     {
       role: "user",
@@ -81,7 +83,8 @@ app.post('/assistant',async(req,res)=>{
     return res.status(200).json({messages:response.messages});
   }
   catch(error){
-      return res.status(500).json({message:"Internal Server Error"});
+    console.log(error);
+      return res.status(500).json({message:"Internal Server Error",error});
   }
 })
 
