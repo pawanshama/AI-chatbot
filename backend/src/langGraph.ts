@@ -3,8 +3,12 @@ import { ChatOpenAI, ChatOpenAICallOptions } from "@langchain/openai";
 import { TavilySearch } from "@langchain/tavily";
 import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
 import { BufferMemory } from "langchain/memory";
+import { DynamicStructuredTool } from "langchain/tools";
+import { z } from "zod";
 import { Tool } from "langchain/tools";
-
+import express from "express";
+// const app = express();
+const router = express.Router();
 // 1. Initialize your LLM
 const llm = new ChatOpenAI({
   openAIApiKey: process.env.OPENAI_API_KEY,
@@ -13,34 +17,55 @@ const llm = new ChatOpenAI({
 });
 
 // 2. Initialize your tool
-const tavily = new TavilySearch({
-  tavilyApiKey: process.env.TAVILY_API_KEY,
-  maxResults: 2,
+const tavilyTool = new DynamicStructuredTool({
+  name: "tavily_search",
+  description: "Useful for answering questions about current events or recent information from the web.",
+  schema: z.object({
+    query: z.string().describe("The search query to look up"),
+  }),
+  func: async ({ query }) => {
+    const tavily = new TavilySearch({
+      tavilyApiKey: process.env.TAVILY_API_KEY,
+      maxResults: 10,
+      topic: "general",
+    });
+    console.log("Tavily Search Query:", query);
+    const result = await tavily.invoke({query});
+    console.log("Tavily Search Result:", result);
+    return result;
+  }
 });
 
+// console.log(tavilyTool);
+// console.log(tavily);
+
 // 3. Optional: Add memory for multi-turn chat
-const memory = new BufferMemory({ returnMessages: true });
+const memory = new BufferMemory({ returnMessages: true,
+memoryKey: "history",
+outputKey: "output" // 👈 Add this line
+ });
 const prompt = ChatPromptTemplate.fromMessages([
   ["system", "You're a helpful AI assistant."],
   new MessagesPlaceholder("history"),
   ["human", "{input}"],
+  ["ai", "{agent_scratchpad}"]
 ]);
 // 4. Create the agent executor
 const agent = await createOpenAIFunctionsAgent({
   llm,
-  tools: [tavily],
+  tools: [tavilyTool],
   prompt
 });
 const executor = AgentExecutor.fromAgentAndTools({
-  tools: [tavily],
   agent,
+  tools: [tavilyTool],
   memory,
   verbose: true,
 });
 
 // 5. Run the agent
-const res = await executor.invoke({ input: "What's new about LangChain?" });
-console.log(res.output);
+// const res = await executor.invoke({ input: "how you help others" });
+// console.log(res.output);
 function pull<T>(arg0: string) {
   throw new Error("Function not implemented.");
 }
@@ -50,87 +75,22 @@ function initializeAgentExecutorWithOptions(tools: any, llm: ChatOpenAI<ChatOpen
   throw new Error("Function not implemented.");
 }
 
-
-
-
-
-
-
-// import { ChatOpenAI, ChatOpenAICallOptions } from "@langchain/openai";
-// import { RunnableSequence } from "@langchain/core/runnables";
-// import {TavilySearch} from "@langchain/tavily";
-// import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
-// import { createReactAgent, AgentExecutor } from "langchain/agents";
-
-
-
-// const llm = new ChatOpenAI({apiKey:process.env.OPENAI_API_KEY ,model: "gpt-4o", temperature: 0.2 });
-// const tavily = new TavilySearch({ maxResults: 2,tavilyApiKey:"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" });
-// const prompt = ChatPromptTemplate.fromMessages([
-//   ["system", "You're a helpful AI assistant."],
-//   new MessagesPlaceholder("history"),
-//   ["human", "{input}"],
-// ]);
-// // const tools = [tavily];
-// // const executor = await initializeAgentExecutorWithOptions(tools, llm, {
-// //   agentType: "openai-functions",
-// //   verbose: true,
-// // });
-// async function run() {
-//   const agent = await createReactAgent({ llm, tools: [tavily] });
-//   const executor = new AgentExecutor({ agent, tools: [tavily] });
-  
-//   const result = await executor.invoke({
-//     input: "What’s the latest news about LangChain?",
-//   });
-
-//   console.log(result.output);
-// }
-
-// run();
-
-// const response = await executor.invoke({
-//   input: "What's the latest news about LangChain?",
-// });
-
-// const chain = RunnableSequence.from([
-//   {
-//     history: async (input, config) => config?.configurable?.chat_history || [],
-//     input: (input) => input.input,
-//   },
-//   prompt,
-//   llm,
-// ]);
-// const runnableWithTool = chain.withConfig({
-//   // tool: [tavily],
-// });
-
-// let checkpointHistory: { role: string; content: any; }[] = [];
-
-// const runChat = async (userInput: any) => {
-//   const result = await runnableWithTool.invoke({
-//     input: userInput,
-//   }, {
-//     configurable: {
-//       chat_history: checkpointHistory,
-//     },
-//   });
-
-//   // Save state
-//   checkpointHistory.push({ role: "user", content: userInput });
-//   checkpointHistory.push({ role: "assistant", content: result.content });
-
-//   return result;
-// };
-// // To time travel to a specific point:
-// const rewindIndex = 4; // or any other step
-// const stateAtCheckpoint = checkpointHistory.slice(0, rewindIndex);
-
-// // Resume from there
-// const result = await runnableWithTool.invoke({
-//   input: "Now try this differently!",
-// }, {
-//   configurable: {
-//     chat_history: stateAtCheckpoint,
-//   },
-// });
+router.post("/run-agent", async (req, res) => {
+  try{
+        const { input } = req.body;
+        if (!input) {
+          return res.status(400).json({ message: "Input is required" });
+        }
+        //run the agent with the provided input
+        const response = await executor.invoke({input});
+        //send the response back to the client but chaeck any error exists if yes then return error message
+        if(!response || !response.output) {
+          return res.status(400).json({message:"Error while running"});
+        }
+        return res.status(200).json({output:response.output});
+  }
+  catch(error){
+    return res.status(500).json({message:"Internal Server Error",error});
+  }
+})
+export default router;
