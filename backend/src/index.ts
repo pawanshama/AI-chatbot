@@ -7,6 +7,7 @@ import backendROutes from "./backend.js";
 import ImageUpload from "./imageUpload.js"
 import managingRoutes from "./managingHistory.js"
 import langGraphRoutes from "./langGraph.js";
+import llamaindexRoutes from "./llamaIndex.js";
 dotenv.config();
 const app = express();
 process.env.LANGSMITH_TRACING = "true";
@@ -18,6 +19,7 @@ app.use('/api/routes',backendROutes);
 app.use('/api/chat',ImageUpload);
 app.use('/api/route/trim_first',managingRoutes)
 app.use('/api/conversations',langGraphRoutes)
+app.use('/api/llamaindex',llamaindexRoutes)
 const port = 9001;
 app.listen(port,()=>{
   console.log(`server is running on ${port}`)
