@@ -3,7 +3,7 @@
     "target": "es2020",
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "lib": ["es2020"],
+    "lib": ["es2020","DOM.AsyncIterable"],
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "esModuleInterop": true,
