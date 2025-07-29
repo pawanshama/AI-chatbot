@@ -1,29 +1,12 @@
 import {
   LlamaParseReader,
-  // we'll add more here later
 } from "llamaindex";
 // import 'dotenv/config'
 import express from "express";
 const app = express.Router();
-// async function main() {
-//     // save the file linked above as sf_budget.pdf, or change this to match
-//     const path = "./src/cover_letter.docx";
-
-//   // set up the llamaparse reader
-//   const reader = new LlamaParseReader({ resultType: "markdown",parse_mode: "parse_page_with_lvm" });
-
-//   // parse the document
-//   const documents = await reader.loadData(path);
-
-//   // print the parsed document
-//   console.log(documents)
-// }
-
-// main().catch(console.error);
-
 
 import fs from "node:fs/promises";
-
+import { DeepInfraEmbedding } from "@llamaindex/deepinfra";
 import { openai, OpenAIEmbedding } from "@llamaindex/openai";
 import {
   Document,
@@ -39,19 +22,29 @@ Settings.llm = openai({
 });
 Settings.embedModel = new OpenAIEmbedding();
 
+// Load essay from abramov.txt in Node
+// const path = "src/cover_letter.docx";
+
+// const essay = await fs.readFile(path, "utf-8");
+
+// Create Document object with essay
+// const document = new Document({ text: essay, id_: path });
+// const reader = new LlamaParseReader({ resultType: "markdown",parse_mode: "parse_page_with_lvm" });
+// const document = await reader.loadData(path);
+
+// Split text and create embeddings. Store them in a VectorStoreIndex
+// const index = await VectorStoreIndex.fromDocuments(document);
+// Query the index
+const model = "intfloat/e5-large-v2";
+const maxRetries = 1;
+const timeout = 5000; // 5 seconds
+Settings.embedModel = new DeepInfraEmbedding({
+  model,
+  maxRetries,
+  timeout,
+});
 async function main() {
-  // Load essay from abramov.txt in Node
-  // const path = "src/cover_letter.docx";
-
-  // const essay = await fs.readFile(path, "utf-8");
-
-  // Create Document object with essay
-  // const document = new Document({ text: essay, id_: path });
-  // const reader = new LlamaParseReader({ resultType: "markdown",parse_mode: "parse_page_with_lvm" });
-  // const document = await reader.loadData(path);
-
-  // Split text and create embeddings. Store them in a VectorStoreIndex
-  // const index = await VectorStoreIndex.fromDocuments(document);
+  // Update Embed Model
 
   //This is new code to parse a document
   const path = "node_modules/llamaindex/examples/abramov.txt";
@@ -81,6 +74,7 @@ async function main() {
 }
 
 main().catch(console.error);
+
 app.post("/parse", async (req, res) => {
     try{
 
