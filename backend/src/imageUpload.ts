@@ -30,7 +30,7 @@ const model = new ChatOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 // console.log(response.text);
-
+//this route is helpful when you search or query from llm with attached image.
 app.post('', upload.single("image"),async(req,res)=>{
     try{
         const text = req.body.text || "What is shown in this image?";
